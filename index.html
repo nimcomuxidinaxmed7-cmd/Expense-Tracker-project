@@ -20,5 +20,18 @@
             <option value="INR">INR (₹)</option>
             <option value="JPY">JPY (¥)</option>
         </select>
-    
-     </div>
+      </div>
+     <section>
+       <h2>Add Entry</h2>
+       <form id="entryForm">
+        <!-- Description -->
+        <div>
+            <label for="description">Description</label>
+            <input type="text" id="description" name="description" placeholder="e.g., Grocery shopping" required/>
+        </div>
+
+        <!--Amount -->
+        <div>
+         <label for="amount">Amount</label>
+         <input type="number" id="number" name="amount" placeholder="0.00" min="0.01" step="0.01" required/>
+        </div>
