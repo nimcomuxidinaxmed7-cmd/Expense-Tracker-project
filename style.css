@@ -1,0 +1,123 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: aliceblue;
+    margin: 30px;
+    color: darkslategray;
+}
+
+h1 {
+    text-align: center;
+    color: midnightblue;
+    margin-bottom: 25px;
+}
+
+body.div {
+    max-width: 500px;
+    margin: 20px auto;
+    padding: 15px;
+    background-color: white;
+    border-radius: 8px;
+}
+
+section {
+    background-color: white;
+    padding: 25px;
+    max-width: 500px;
+    margin: 20px auto;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px lightgray;
+}
+
+h2 {
+    color: steelblue;
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 7px;
+    font-weight: bold;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid lightgray;
+    border-radius: 5px;
+    box-sizing: border-box;
+    font-size: 14px;
+    background-color: white;
+}
+
+input:focus,
+select:focus {
+    outline: 2px solid lightblue;
+    border-color: steelblue;
+}
+
+button {
+    margin-top: 20px;
+    padding: 12px;
+    width: 100%;
+    background-color: steelblue;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: midnightblue;
+}
+
+#expensesContainer {
+    margin-top: 25px;
+    padding: 10px;
+}
+
+section p {
+    margin-top: 20px;
+    padding: 12px;
+    background-color: aliceblue;
+    border-radius: 5px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#totalAmount {
+    color: seagreen;
+}
+
+footer {
+    text-align: center;
+    margin-top: 25px;
+    font-size: 14px;
+}
+
+footer a {
+    color: steelblue;
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: midnightblue;
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    body {
+        margin: 15px;
+    }
+
+    section {
+        padding: 18px;
+    }
+
+    h1 {
+        font-size: 26px;
+    }
+}
