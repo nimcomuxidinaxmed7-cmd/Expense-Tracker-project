@@ -122,7 +122,6 @@ footer a:hover {
         font-size: 26px;
     }
 }
-/* Section hover effect */
 section {
     transition: box-shadow 0.3s ease;
 }
