@@ -1,23 +1,9 @@
 
-let expenses = [];
-
-export function addExpense(expense) {
-  expenses = [...expenses, expense];
-  return expenses;
+export function convert(amount, fromRate, toRate) {
+  return (amount / fromRate) * toRate;
 }
 
-export function removeExpense(id) {
-  expenses = expenses.filter(function (expense) {
-    return expense.id !== id;
-  });
-  return expenses;
-}
-
-export function setExpenses(newExpenses) {
-  expenses = [...newExpenses];
-  return expenses;
-}
-
-export function getExpenses() {
-  return [...expenses];
+// Adds up an array of numbers. 
+export function calculateTotal(amounts) {
+  return amounts.reduce((sum, amount) => sum + amount, 0);
 }
