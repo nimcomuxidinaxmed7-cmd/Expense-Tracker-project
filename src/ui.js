@@ -1,10 +1,11 @@
 
-export function drawExpense(expense) {
+export function drawExpense(expense, currency) {
   return (
     expense.description +
     " - " +
     expense.category +
-    " - KSh " +
+    " - " +
+    currency + " " +
     expense.amount
   );
 }
@@ -30,5 +31,5 @@ export function drawTotal(expenses) {
     total += Number(expense.amount);
   });
 
-  return "Total spent: KSh " + total;
+  return total;
 }
