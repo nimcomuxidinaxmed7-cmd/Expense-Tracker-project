@@ -1,206 +1,181 @@
+
 import { fetchRates } from './api.js';
 import { convert, calculateTotal } from './utils.js';
 import {
   createInitialState,
   addExpense,
   removeExpense,
-  setFilter,
   setRates,
   setStatus,
   setHomeCurrency,
 } from './state.js';
-import { drawExpense, drawExpenses } from './ui.js';
+import { drawExpense } from './ui.js';
 
-// --- State Holder ---
+// State
 let state = createInitialState();
 
-// --- DOM Element References ---
-const expenseForm = document.querySelector('#expense-form');
-const expenseListContainer = document.querySelector('#expense-list');
-const totalContainer = document.querySelector('#total-display');
-const statusContainer = document.querySelector('#status-display');
-const categoryFilter = document.querySelector('#category-filter');
-const homeCurrencySelect = document.querySelector('#home-currency');
+// HTML elements — these match index.html
+const expenseForm = document.querySelector('#entryForm');
+const expenseListContainer = document.querySelector('#expensesContainer');
+const totalContainer = document.querySelector('#totalAmount');
+const homeCurrencySelect = document.querySelector('#homeCurrency');
 
-// --- Small drawing helpers (they put text on the page) ---
+// Check that the required HTML elements exist
+if (!expenseForm || !expenseListContainer || !totalContainer || !homeCurrencySelect) {
+  throw new Error('An HTML element is missing. Check the IDs in index.html.');
+}
 
-// Draws the list. ui.js gives us the text for each row; we add the
-// converted amount and a delete button around it.
+// Show expenses on the page
 function showList(expenses) {
   expenseListContainer.textContent = '';
 
   if (expenses.length === 0) {
-    // drawExpenses([]) returns the "No expenses added yet." message
-    expenseListContainer.textContent = drawExpenses([]);
+    expenseListContainer.textContent = 'No expenses added yet.';
     return;
   }
 
-  // If the container is a <ul> or <ol>, rows must be <li>; otherwise use <div>
-  const tag = expenseListContainer.tagName;
-  const rowTag = tag === 'UL' || tag === 'OL' ? 'li' : 'div';
-
-  expenses.forEach((exp) => {
-    // A converted amount that isn't a real number means no rate was available
-    const convertedText = Number.isFinite(exp.convertedAmount)
-      ? `${exp.homeCurrency} ${exp.convertedAmount.toFixed(2)}`
-      : 'rate unavailable';
-
-    const row = document.createElement(rowTag);
+  expenses.forEach((expense) => {
+    const row = document.createElement('div');
     row.className = 'expense-item';
 
     const info = document.createElement('span');
-    // drawExpense(exp, exp.currency) -> "Lunch - Food - USD 12"
-    // textContent (not innerHTML) so a typed description can never run as code
-    info.textContent = `${drawExpense(exp, exp.currency)} → ${convertedText}`;
+    const convertedAmount = Number(expense.convertedAmount);
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.textContent = 'Delete';
-    // These become data-action="delete" and data-id="..." in the HTML
-    deleteBtn.dataset.action = 'delete';
-    deleteBtn.dataset.id = exp.id;
+    let convertedText = 'Rate unavailable';
 
-    row.append(info, deleteBtn);
-    expenseListContainer.append(row);
+    if (Number.isFinite(convertedAmount)) {
+      convertedText =
+        `${expense.homeCurrency} ${convertedAmount.toFixed(2)}`;
+    }
+
+    info.textContent =
+      `${drawExpense(expense, expense.currency)} → ${convertedText}`;
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.textContent = 'Delete';
+    deleteButton.dataset.id = expense.id;
+
+    row.append(info, deleteButton);
+    expenseListContainer.appendChild(row);
   });
 }
 
+// Show the total
 function showTotal(total) {
-  totalContainer.textContent = `Total: ${Number(total).toFixed(2)} ${state.homeCurrency}`;
+  totalContainer.textContent =
+    `${Number(total).toFixed(2)} ${state.homeCurrency}`;
 }
 
-function showStatus() {
-  if (state.status === 'loading') {
-    statusContainer.textContent = 'Loading exchange rates…';
-  } else if (state.status === 'error') {
-    statusContainer.textContent = `Could not load rates: ${state.error}`;
-  } else {
-    statusContainer.textContent = '';
-  }
-}
-
-// --- Render Loop ---
+// Update the page
 function render() {
-  // 1. Filter expenses
-  const visibleExpenses = state.filter === 'all'
-    ? state.expenses
-    : state.expenses.filter((exp) => exp.category === state.filter);
+  const convertedExpenses = state.expenses.map((expense) => {
+    let convertedAmount = null;
 
-  // 2. Copy each expense and add a converted amount (spread + convert)
-  const convertedExpenses = visibleExpenses.map((exp) => {
-    let convertedAmount;
-
-    if (exp.currency === state.homeCurrency) {
-      // Already in the home currency: no conversion needed
-      convertedAmount = exp.amount;
+    if (expense.currency === state.homeCurrency) {
+      convertedAmount = Number(expense.amount);
     } else {
-      const rate = state.rates[exp.currency];
-      const homeRate = state.rates[state.homeCurrency];
+      const rate = state.rates[expense.currency];
 
-      // A missing rate gives null ("unknown"), not a made-up number
-      convertedAmount = (rate === undefined || homeRate === undefined)
-        ? null
-        : convert(exp.amount, rate, homeRate);
+      if (Number.isFinite(rate)) {
+        convertedAmount = convert(
+          Number(expense.amount),
+          rate,
+          1
+        );
+      }
     }
 
     return {
-      ...exp,
+      ...expense,
       convertedAmount,
       homeCurrency: state.homeCurrency,
     };
   });
 
-  // 3. Total only the amounts we could actually convert
-  const total = calculateTotal(
-    convertedExpenses
-      .map((e) => e.convertedAmount)
-      .filter((amount) => Number.isFinite(amount))
-  );
+  const amounts = convertedExpenses
+    .map((expense) => expense.convertedAmount)
+    .filter((amount) => Number.isFinite(amount));
 
-  // 4. Update the page
+  const total = calculateTotal(amounts);
+
   showList(convertedExpenses);
   showTotal(total);
-  showStatus();
 }
 
-// --- API Loader ---
-async function loadRates(baseCurrency) {
-  // Old rates belong to the old base currency, so clear them first
+// Load exchange rates
+async function loadRates(currency) {
   state = setRates(state, {});
   state = setStatus(state, 'loading', null);
-  render();
 
   try {
-    const rates = await fetchRates(baseCurrency);
+    const rates = await fetchRates(currency);
     state = setRates(state, rates);
     state = setStatus(state, 'idle', null);
-  } catch (err) {
-    // Rates are already empty, so we only record the error
-    state = setStatus(state, 'error', err.message);
+  } catch (error) {
+    state = setStatus(state, 'error', error.message);
+    console.error('Could not load exchange rates:', error);
   }
 
   render();
 }
 
-// --- Event Listeners ---
+// Add an expense
+expenseForm.addEventListener('submit', (event) => {
+  event.preventDefault();
 
-// Form Submission (Add Expense)
-expenseForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-
-  const titleInput = document.querySelector('#expense-title');
-  const amountInput = document.querySelector('#expense-amount');
-  const currencyInput = document.querySelector('#expense-currency');
-  const categoryInput = document.querySelector('#expense-category');
+  const titleInput = document.querySelector('#description');
+  const amountInput = document.querySelector('#number');
+  const currencyInput = document.querySelector('#currency');
+  const categoryInput = document.querySelector('#category');
 
   const description = titleInput.value.trim();
-  if (description === '') {
-    alert('Please enter a description for the expense.');
-    return;
-  }
-
   const amount = Number(amountInput.value);
-  if (isNaN(amount) || amount <= 0) {
-    alert('Please enter a valid amount greater than 0.');
+
+  if (!description || !Number.isFinite(amount) || amount <= 0) {
+    alert('Please enter a description and a valid amount.');
     return;
   }
 
   const newExpense = {
     id: crypto.randomUUID(),
-    description, // ui.js reads expense.description
+    description,
     amount,
     currency: currencyInput.value,
     category: categoryInput.value,
   };
 
   state = addExpense(state, newExpense);
+
   expenseForm.reset();
   render();
 });
 
-// Event Delegation for Deleting
-expenseListContainer.addEventListener('click', (e) => {
-  const deleteBtn = e.target.closest('[data-action="delete"]');
-  if (!deleteBtn) return;
+// Delete an expense
+expenseListContainer.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-id]');
 
-  const id = deleteBtn.dataset.id;
-  state = removeExpense(state, id);
+  if (!button) return;
+
+  state = removeExpense(state, button.dataset.id);
   render();
 });
 
-// Category Filter Change
-categoryFilter.addEventListener('change', (e) => {
-  state = setFilter(state, e.target.value);
-  render();
+// Change home currency
+homeCurrencySelect.addEventListener('change', async (event) => {
+  const currency = event.target.value;
+
+  if (!currency) return;
+
+  state = setHomeCurrency(state, currency);
+  await loadRates(currency);
 });
 
-// Home Currency Change
-homeCurrencySelect.addEventListener('change', (e) => {
-  const newBase = e.target.value;
-  state = setHomeCurrency(state, newBase);
-  loadRates(newBase);
-});
+// Start the app
+if (!homeCurrencySelect.value) {
+  homeCurrencySelect.value = 'USD';
+}
 
-// --- Initial Boot ---
-loadRates(homeCurrencySelect.value || 'USD');
+state = setHomeCurrency(state, homeCurrencySelect.value);
+render();
+loadRates(homeCurrencySelect.value);
